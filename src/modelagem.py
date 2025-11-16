@@ -1,18 +1,11 @@
 from gurobipy import Model, GRB, quicksum
 
-def criar_modelo(nodes, origin, dest, c, s, a, b, M=2000):
-    """
-    Cria e retorna o modelo Gurobi para o TSP com janelas de tempo (rota aberta 0 → 6).
 
-    Retorna:
-        model, x, u, T
-    """
+def criar_modelo(nodes, origin, dest, c, s, a, b, M=1440):
 
     n = len(nodes)
 
-    # -------------------------
     # Modelo
-    # -------------------------
     model = Model("Open_TSP_TW_MTZ")
 
     # Variáveis
@@ -30,14 +23,10 @@ def criar_modelo(nodes, origin, dest, c, s, a, b, M=2000):
     # Fixar posição da origem
     model.addConstr(u[origin] == 0)
 
-    # -------------------------
     # Objetivo
-    # -------------------------
     model.setObjective(quicksum(c[i][j] * x[i, j] for i, j in x), GRB.MINIMIZE)
 
-    # -------------------------
     # Restrições de grau — rota aberta 0 → 6
-    # -------------------------
 
     # Origem: 1 saída, 0 entradas
     model.addConstr(quicksum(x[origin, j] for j in nodes if j != origin) == 1)
@@ -53,17 +42,13 @@ def criar_modelo(nodes, origin, dest, c, s, a, b, M=2000):
             model.addConstr(quicksum(x[k, j] for j in nodes if j != k) == 1)
             model.addConstr(quicksum(x[i, k] for i in nodes if i != k) == 1)
 
-    # -------------------------
     # MTZ — adaptado para rota aberta
-    # -------------------------
     for i in nodes:
         for j in nodes:
             if i != j:
                 model.addConstr(u[i] - u[j] + n * x[i, j] <= n - 1)
 
-    # -------------------------
     # Sequenciamento temporal
-    # -------------------------
     for i in nodes:
         for j in nodes:
             if i != j:
