@@ -1,0 +1,5 @@
+gurobipy
+requests
+python-dotenv
+rapidfuzz
+folium
