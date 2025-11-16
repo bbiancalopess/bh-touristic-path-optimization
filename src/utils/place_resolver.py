@@ -1,71 +1,96 @@
-from src.utils.fuzzy_search import search_on_csv
-from src.datasources.maps_api import searches_local_places
+"""Place resolution utilities for finding and managing touristic locations."""
+
+from typing import Dict, List, Optional, Tuple
 import os
 import csv
 import math
 
+from src.utils.fuzzy_search import search_on_csv
+from src.datasources.maps_api import search_place_on_google
+from src.ui.user_interface import confirm_location, display_info, display_success
 
-def place_resolver(typed_name, spots, api_key):
+
+def resolve_place(typed_name: str, spots: List[Dict], api_key: str) -> Optional[Dict]:
     """
-    Tries to solve the place:
-    1. Fuzzy match on csv
-    2. Search on Google Maps
+    Resolve a place name to a location from the database or Google Maps.
+    
+    Process:
+    1. Try fuzzy matching against existing spots in CSV
+    2. If not found or not confirmed, search on Google Maps
+    3. Check for duplicates before saving new locations
+    
+    Args:
+        typed_name: User-typed name of the location
+        spots: List of existing spots from database
+        api_key: Google Maps API key
+    
+    Returns:
+        Dictionary with location data or None if not found
     """
 
     place, score = search_on_csv(typed_name, spots)
 
     if place is not None:
-        print(f"\n📍 Encontrado no CSV (confiança {score:.1f}%):")
-        print(f"   Nome: {place['name']}")
-        print(f"   Endereço: {place.get('address', 'Não disponível')}")
-        
-        confirm = input("\nEste é o local correto? (s/n): ").lower().strip()
-        if confirm == 's':
+        if confirm_location(
+            place['name'],
+            place.get('address', ''),
+            'CSV',
+            confidence=score
+        ):
             return place
         else:
             print("Buscando outras opções...")
 
-    print(f"⚠ Não encontrado no CSV (score {score:.1f}%). Buscando no Google Maps...")
+    display_info(f"Não encontrado no CSV (score {score:.1f}%). Buscando no Google Maps...")
+    
+    google_place = search_place_on_google(typed_name, api_key)
 
-    mapa = searches_local_places(typed_name, api_key)
-
-    if mapa is None:
+    if google_place is None:
         print("❌ Google Maps não encontrou esse local.")
         return None
-
-    print(f"\n📍 Local encontrado no Google Maps:")
-    print(f"   Nome: {mapa['name']}")
-    print(f"   Endereço: {mapa['address']}")
     
-    confirm = input("\nEste é o local correto? (s/n): ").lower().strip()
-    if confirm != 's':
+    if not confirm_location(
+        google_place['name'],
+        google_place['address'],
+        'Google Maps'
+    ):
         print("❌ Busca cancelada.")
         return None
 
     # Check for duplicates by coordinates
-    duplicate = check_duplicate_by_coordinates(mapa['lat'], mapa['lng'], spots)
+    duplicate = find_duplicate_by_coordinates(
+        google_place['lat'],
+        google_place['lng'],
+        spots
+    )
+    
     if duplicate:
-        print(f"\n⚠️ Este local já existe no banco de dados como: {duplicate['name']}")
+        display_info(f"Este local já existe no banco de dados como: {duplicate['name']}")
         use_existing = input("Deseja usar o local existente? (s/n): ").lower().strip()
         if use_existing == 's':
             return duplicate
         else:
             print("❌ Operação cancelada.")
             return None
+    
+    new_place = save_new_place_to_csv(google_place, spots)
+    return new_place
 
-    novo = salvar_novo_lugar_csv(mapa, spots)
 
-    return novo
-
-
-def check_duplicate_by_coordinates(lat, lng, spots, threshold_meters=50):
+def find_duplicate_by_coordinates(
+    lat: float,
+    lng: float,
+    spots: List[Dict],
+    threshold_meters: float = 50
+) -> Optional[Dict]:
     """
     Check if a location already exists based on coordinates.
     threshold_meters: maximum distance in meters to consider as duplicate
     """
-    def haversine_distance(lat1, lon1, lat2, lon2):
+    def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Calculate distance between two points on Earth using Haversine formula."""
         # Earth radius in meters
-        R = 6371000
+        earth_radius_meters = 6371000
         
         # Convert to radians
         lat1_rad = math.radians(lat1)
@@ -76,7 +101,7 @@ def check_duplicate_by_coordinates(lat, lng, spots, threshold_meters=50):
         # Haversine formula
         a = math.sin(delta_lat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon/2)**2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-        distance = R * c
+        distance = earth_radius_meters * c
         
         return distance
     
@@ -87,50 +112,61 @@ def check_duplicate_by_coordinates(lat, lng, spots, threshold_meters=50):
     
     return None
 
-def salvar_novo_lugar_csv(novo_lugar, spots, path="src/datasources/touristic_spots.csv"):
+def save_new_place_to_csv(
+    new_place: Dict,
+    existing_spots: List[Dict],
+    csv_path: str = "src/datasources/touristic_spots.csv"
+) -> Dict:
     """
-    Adiciona um novo lugar ao CSV com ID automático.
-    novo_lugar deve conter: nome, lat, lon
+    Add a new place to the CSV file with automatic ID generation.
+    
+    Args:
+        new_place: Dictionary with 'name', 'address', 'lat', 'lng' keys
+        existing_spots: List of existing spots (unused but kept for compatibility)
+        csv_path: Path to the CSV file
+    
+    Returns:
+        Dictionary with the saved place data including generated ID
     """
 
-    # Ler dados existentes
-    linhas = []
-    if os.path.exists(path):
-        with open(path, newline="", encoding="utf-8") as f:
+    # Read existing data
+    existing_rows = []
+    if os.path.exists(csv_path):
+        with open(csv_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                linhas.append(row)
-
-    # Gerar novo ID
-    if len(linhas) == 0:
-        novo_id = 0
+                existing_rows.append(row)
+    
+    # Generate new ID
+    if len(existing_rows) == 0:
+        new_id = 0
     else:
-        novo_id = max(int(l["id"]) for l in linhas) + 1
-
-    # Criar linha completa
-    nova_linha = {
-        "id": novo_id,
-        "name": novo_lugar["name"],
-        "address": novo_lugar["address"],
-        "lat": novo_lugar["lat"],
-        "lng": novo_lugar["lng"],
+        new_id = max(int(row["id"]) for row in existing_rows) + 1
+    
+    # Create complete row
+    new_row = {
+        "id": new_id,
+        "name": new_place["name"],
+        "address": new_place["address"],
+        "lat": new_place["lat"],
+        "lng": new_place["lng"],
         "opening_time": "00:00",
         "closing_time": "23:59"
     }
-
-    # Salvar no CSV
-    with open(path, "a", newline="", encoding="utf-8") as f:
+    
+    # Save to CSV
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=["id", "name", "address", "lat", "lng", "opening_time", "closing_time"]
         )
 
-        # Se o CSV estiver vazio, escrever cabeçalho
+        # Write header if CSV is empty
         if f.tell() == 0:
             writer.writeheader()
-
-        writer.writerow(nova_linha)
-
-    print(f"💾 Novo lugar salvo no CSV com id={novo_id}: {novo_lugar['name']}")
-
-    return nova_linha
+        
+        writer.writerow(new_row)
+    
+    display_success(f"Novo lugar salvo no CSV com id={new_id}: {new_place['name']}")
+    
+    return new_row
