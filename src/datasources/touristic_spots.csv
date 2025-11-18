@@ -1,11 +1,28 @@
 id,name,address,lat,lng,opening_time,closing_time
-0,Praça da Liberdade,,-19.932873,-43.937169,08:00,20:00
-1,Mercado Central,,-19.922163,-43.940025,07:00,18:00
-2,Museu de Arte da Pampulha,,-19.858364,-43.979319,09:00,17:00
-3,Igreja São Francisco,,-19.858556,-43.978417,09:00,17:00
-4,Mirante do Mangabeiras,,-19.936210,-43.904554,08:00,19:00
-5,Palácio das Artes,,-19.928680,-43.937130,10:00,22:00
-6,Mercury BH Hotel,,-19.940123,-43.933345,06:00,20:00
-7,"Ouro Minas Hotel Belo Horizonte, Dolce by Wyndham","Av. Cristiano Machado, 4001 - Ipiranga, Belo Horizonte - MG, 31160-413, Brasil",-19.876279,-43.9290131,00:00,23:59
-8,"R. São Francisco Xavier, 637 - Jardim Felicidade","R. São Francisco Xavier, 637 - Jardim Felicidade, Belo Horizonte - MG, 31742-438, Brasil",-19.8266181,-43.927114,00:00,23:59
-9,"R. Flôr de Índio, 100 - Liberdade","R. Flôr de Índio, 100 - Liberdade, Belo Horizonte - MG, 31270-215, Brasil",-19.8667265,-43.95555660000001,00:00,23:59
+1,Praça da Liberdade,"Avenida Bias Fortes / Avenida Brasil / Avenida João Pinheiro – Centro-Sul, Belo Horizonte, MG",-19.9317,-43.9357,00:00,23:59
+2,Praça da Assembleia,"Praça da Assembleia – Belo Horizonte, MG",-19.9330,-43.9365,00:00,23:59
+3,Lagoa da Pampulha,"Lagoa da Pampulha – Belo Horizonte, MG",-19.8303,-43.9602,00:00,23:59
+4,Praça do Papa,"Praça do Papa – Mangabeiras, Belo Horizonte, MG",-19.9443,-43.9378,00:00,23:59
+5,Mirante dos Mangabeiras,"Mirante – Mangabeiras, Belo Horizonte, MG",-19.9601,-43.9459,00:00,23:59
+6,Parque das Mangabeiras,"Parque das Mangabeiras – Belo Horizonte, MG",-19.9608,-43.9453,06:00,18:00
+7,Parque da Serra do Curral,"Parque da Serra do Curral – Belo Horizonte, MG",-19.9294,-43.9001,06:00,18:00
+8,Parque Municipal Américo Renné Giannetti,"Centro – Belo Horizonte, MG",-19.9175,-43.9342,05:00,22:00
+9,Zoológico de Belo Horizonte,"Av. Otacílio Negrão de Lima – Pampulha, BH",-19.8398,-43.9671,09:00,17:00
+10,Parque Guanabara,"Av. Otacílio Negrão de Lima – Pampulha, BH",-19.8300,-43.9610,14:00,22:00
+11,Igreja São Francisco de Assis (Pampulha),"Pampulha – Belo Horizonte, MG",-19.8281,-43.9579,08:00,17:00
+12,Igreja Nossa Senhora da Boa Viagem,"Boa Viagem – Belo Horizonte, MG",-19.9311,-43.9355,07:00,19:00
+13,Basílica Nossa Senhora de Lourdes,"Funcionários – Belo Horizonte, MG",-19.9349,-43.9350,07:00,22:00
+14,Igreja São José,"Centro – Belo Horizonte, MG",-19.9360,-43.9370,06:00,20:00
+15,Museu de Arte da Pampulha,"Pampulha – Belo Horizonte, MG",-19.8270,-43.9600,10:00,18:00
+16,Casa do Baile,"Pampulha – Belo Horizonte, MG",-19.8293,-43.9588,10:00,18:00
+17,Memorial Minas Gerais Vale,"Praça da Liberdade – Belo Horizonte, MG",-19.9317,-43.9388,10:00,17:00
+18,Museu das Minas e do Metal,"Praça da Liberdade – Belo Horizonte, MG",-19.931668,-43.938827,10:00,17:00
+19,Centro Cultural Banco do Brasil,"Praça da Liberdade – Belo Horizonte, MG",-19.9316,-43.9389,10:00,21:00
+20,Museu de Artes e Ofícios,"Praça da Estação – Belo Horizonte, MG",-19.9325,-43.9325,10:00,17:00
+21,Museu Mineiro,"Av. João Pinheiro – Belo Horizonte, MG",-19.9318,-43.9359,10:00,17:00
+22,Museu de Ciências Naturais PUC Minas,"Coração Eucarístico – Belo Horizonte, MG",-19.8827,-43.9570,08:30,17:00
+23,Museu Histórico Abílio Barreto,"Av. Prudente de Morais – Belo Horizonte, MG",-19.9300,-43.9390,10:00,17:00
+24,Mercado Central,"Av. Augusto de Lima 744 – Centro, Belo Horizonte, MG",-19.9214,-43.9403,07:00,18:00
+25,Mercado Novo,"Rua Rio Grande do Sul – Centro, Belo Horizonte, MG",-19.9208,-43.9379,10:00,22:00
+26,Estádio Mineirão,"Av. Antônio Abrahão Caram 1001 – Pampulha, BH",-19.8659,-43.9712,09:00,18:00
+27,Palácio da Liberdade,"Praça da Liberdade – Belo Horizonte, MG",-19.9315,-43.9383,10:00,17:00
