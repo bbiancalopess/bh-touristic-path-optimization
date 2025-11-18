@@ -1,9 +1,11 @@
 """Google Maps route link generation."""
 
-from typing import List, Dict
+from typing import List
+
+from src.datasources.models import Place
 
 
-def generate_google_link(places: List[Dict], route_indices: List[int]) -> str:
+def generate_google_link(places: List[Place], route_indices: List[int]) -> str:
     """
     Generate a Google Maps URL for the optimal route.
     
@@ -18,7 +20,7 @@ def generate_google_link(places: List[Dict], route_indices: List[int]) -> str:
     waypoints = []
     for index in route_indices:
         place = places[index]
-        waypoints.append(f"{place['lat']},{place['lng']}")
+        waypoints.append(f"{place.lat},{place.lng}")
     
     # Construct Google Maps directions URL
     base_url = "https://www.google.com/maps/dir/"

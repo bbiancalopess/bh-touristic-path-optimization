@@ -42,12 +42,16 @@ def create_optimization_model(
     # Create model
     model = Model("Open_TSP_TW_MTZ")
 
+    # ---------------------------------------------------------
+    # Variables
+    # ---------------------------------------------------------
+
     # Decision variables
     # x[i,j] = 1 if edge from node i to node j is used
     x_vars = {(i, j): model.addVar(vtype=GRB.BINARY, name=f"x_{i}_{j}")
               for i in nodes for j in nodes if i != j}
 
-    # u[i] = position of node i in the route (for MTZ subtour elimination)
+    # u[i] = position of node i in the route
     u_vars = {i: model.addVar(vtype=GRB.INTEGER, lb=0, ub=num_nodes, name=f"u_{i}")
               for i in nodes}
 
@@ -57,8 +61,9 @@ def create_optimization_model(
 
     model.update()
 
-    # Fix origin position
-    model.addConstr(u_vars[origin_index] == 0)
+    # ---------------------------------------------------------
+    # Objective: minimize travel time
+    # ---------------------------------------------------------
 
     # Objective: minimize total travel time
     model.setObjective(
@@ -66,28 +71,31 @@ def create_optimization_model(
         GRB.MINIMIZE
     )
 
-    # Degree constraints for open route
+    # ---------------------------------------------------------
+    # Constraints
+    # ---------------------------------------------------------
 
-    # Origin: exactly 1 outgoing edge, 0 incoming edges
+    # Fix origin position
+    model.addConstr(u_vars[origin_index] == 0)
+
+    # Origin: 1 outgoing, 0 incoming
     model.addConstr(quicksum(x_vars[origin_index, j] for j in nodes if j != origin_index) == 1)
     model.addConstr(quicksum(x_vars[i, origin_index] for i in nodes if i != origin_index) == 0)
 
-    # Destination: exactly 1 incoming edge, 0 outgoing edges
+    # Destination: 1 incoming, 0 outgoing
     model.addConstr(quicksum(x_vars[i, destination_index] for i in nodes if i != destination_index) == 1)
     model.addConstr(quicksum(x_vars[destination_index, j] for j in nodes if j != destination_index) == 0)
 
-    # Intermediate nodes: exactly 1 incoming and 1 outgoing edge
-    for k in nodes:
-        if k not in (origin_index, destination_index):
-            model.addConstr(quicksum(x_vars[k, j] for j in nodes if j != k) == 1)
-            model.addConstr(quicksum(x_vars[i, k] for i in nodes if i != k) == 1)
+    for i in nodes:
+        # Intermediate nodes: exactly 1 incoming and 1 outgoing edge
+        if i not in (origin_index, destination_index):
+            model.addConstr(quicksum(x_vars[i, j] for j in nodes if j != i) == 1)
+            model.addConstr(quicksum(x_vars[j, i] for j in nodes if j != i) == 1)
 
         # Time window constraints
-        model.addConstr(T_vars[k] >= opening_times[k])
-        model.addConstr(T_vars[k] <= closing_times[k] - stay_times[k])
+        model.addConstr(T_vars[i] >= opening_times[i])
+        model.addConstr(T_vars[i] <= closing_times[i] - stay_times[i])
 
-    # MTZ subtour elimination constraints (adapted for open route)
-    for i in nodes:
         for j in nodes:
             if i != j:
                 # MTZ subtour elimination constraints (adapted for open route)

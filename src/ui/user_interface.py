@@ -2,13 +2,15 @@
 
 from typing import List, Dict, Tuple, Optional
 
+from src.datasources.models import Place
 
-def choose_from_list(spots: List[Dict], message: str = "Escolha um local:") -> Tuple[Optional[Dict], Optional[str]]:
+
+def choose_from_list(places: List[Place], message: str = "Escolha um local:") -> Tuple[Optional[Place], Optional[str]]:
     """
-    Let user choose from a list of spots or enter a custom name.
+    Let user choose from a list of places or enter a custom name.
     
     Args:
-        spots: List of available spots
+        places: List of available spots
         message: Message to display to user
     
     Returns:
@@ -17,16 +19,16 @@ def choose_from_list(spots: List[Dict], message: str = "Escolha um local:") -> T
         If custom name is entered, returns (None, custom_name)
     """
     print(f"\n{message}")
-    for i, spot in enumerate(spots):
-        print(f"{i+1:2d}. {spot['name']}")
-    print(f"{len(spots)+1:2d}. Outro local (digitar nome)")
+    for i, place in enumerate(places):
+        print(f"{i+1:2d}. {place.name}")
+    print(f"{len(places) + 1:2d}. Outro local (digitar nome)")
     
     while True:
         try:
             choice = int(input("\nEscolha uma opção: "))
-            if 1 <= choice <= len(spots):
-                return spots[choice-1], None
-            elif choice == len(spots) + 1:
+            if 1 <= choice <= len(places):
+                return places[choice - 1], None
+            elif choice == len(places) + 1:
                 custom_name = input("Digite o nome do local: ")
                 return None, custom_name
             else:
@@ -35,41 +37,41 @@ def choose_from_list(spots: List[Dict], message: str = "Escolha um local:") -> T
             print("Por favor, digite um número.")
 
 
-def choose_spots_to_visit(spots: List[Dict]) -> Tuple[List[int], Dict[int, int]]:
+def choose_spots_to_visit(places: List[Place]) -> Tuple[List[int], Dict[int, int]]:
     """
     Let user choose which spots to visit and their stay times.
     
     Args:
-        spots: List of all available spots
+        places: List of all available spots
     
     Returns:
         Tuple of (spot_ids, stay_times_dict)
     """
     print("\n=== Lista de Pontos Turísticos ===")
-    for spot in spots:
-        print(f"{spot['id']:2d}: {spot['name']}")
+    for place in places:
+        print(f"{place.id:2d}: {place.name}")
     
     print("\nDigite os IDs dos lugares que deseja visitar (separados por vírgula):")
     ids_input = input(" → ").replace(" ", "").split(",")
-    spot_ids = list(map(int, ids_input))
+    places_ids = list(map(int, ids_input))
     
     # Get stay time for each place
     stay_times = {}
     print("\nDigite o tempo de permanência (em minutos) para cada local:")
-    for spot_id in spot_ids:
-        place_name = next(s['name'] for s in spots if s['id'] == spot_id)
+    for place_id in places_ids:
+        place_name = next(p.name for p in places if p.id == place_id)
         while True:
             try:
                 time = int(input(f" {place_name}: "))
                 if time > 0:
-                    stay_times[spot_id] = time
+                    stay_times[place_id] = time
                     break
                 else:
                     print("Por favor, digite um número positivo.")
             except ValueError:
                 print("Por favor, digite um número válido.")
     
-    return spot_ids, stay_times
+    return places_ids, stay_times
 
 
 def confirm_location(location_name: str, location_address: str, source: str, confidence: float = None) -> bool:
@@ -94,7 +96,7 @@ def confirm_location(location_name: str, location_address: str, source: str, con
 
 
 def display_optimal_route(
-    places: List[Dict], 
+    places: List[Place],
     route_indices: List[int], 
     arrival_times: Dict[int, float],
     stay_times: Dict[int, int],
@@ -133,7 +135,7 @@ def display_optimal_route(
         stay = stay_times[node_index]
         departure = arrival + stay
         
-        print(f"{i+1}. {place['name']}")
+        print(f"{i+1}. {place.name}")
         print(f"   Chegada: {minutes_to_time(arrival)}")
         if stay > 0:
             print(f"   Permanência: {stay} minutos")
@@ -145,6 +147,21 @@ def display_optimal_route(
     
     if total_route_duration is not None:
         print(f"Duração total da rota: {total_route_duration} minutos ({total_route_duration // 60}h {total_route_duration % 60}min)")
+
+
+def ask_for_starting_time() -> int:
+    print("\nQual horário deseja iniciar a rota? (formato HH:MM, ex: 08:30)")
+    while True:
+        try:
+            start_time = input(" → ").strip()
+            hours, minutes = map(int, start_time.split(":"))
+            if 0 <= hours < 24 and 0 <= minutes < 60:
+                start_minutes = hours * 60 + minutes
+                return start_minutes
+            else:
+                print("Horário inválido. Use formato HH:MM (ex: 08:30)")
+        except:
+            print("Formato inválido. Use HH:MM (ex: 08:30)")
 
 
 def display_error(message: str) -> None:

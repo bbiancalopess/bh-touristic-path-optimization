@@ -7,17 +7,18 @@ from typing import List, Dict, Tuple
 import os
 from dotenv import load_dotenv
 
-from src.datasources.load_places import load_spots
+from src.datasources.models import Place
+from src.datasources.load_places import load_places
 from src.datasources.maps_api import get_google_matrix
 from src.optimization.optimization_model import create_optimization_model
 from src.routes.google_link import generate_google_link
-from src.utils.time_utils import h2m
+from src.utils.time_utils import hhmm_to_minutes
 from src.utils.place_resolver import resolve_place
 from src.ui.user_interface import (
     choose_from_list,
     choose_spots_to_visit,
     display_optimal_route,
-    display_error,
+    display_error, ask_for_starting_time,
 )
 
 # Load environment variables
@@ -25,39 +26,39 @@ load_dotenv()
 API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
 
-def get_origin_and_destination(spots: List[Dict]) -> Tuple[Dict, Dict, List[Dict]]:
+def get_origin_and_destination(places: List[Place]) -> Tuple[Place, Place, List[Place]]:
     """Get origin and destination from user input.
     
     Returns:
         Tuple of (origin, destination, updated_spots)
     """
     # Choose origin
-    origin_spot, origin_name = choose_from_list(spots, "Escolha o local de ORIGEM:")
+    origin_spot, origin_name = choose_from_list(places, "Escolha o local de ORIGEM:")
     if origin_spot:
         origin = origin_spot
     else:
-        origin = resolve_place(origin_name, spots, API_KEY)
+        origin = resolve_place(origin_name, places, API_KEY)
         if origin:
-            spots = load_spots()  # Reload to get the new spot
+            places = load_places()  # Reload to get the new spot
     
     # Choose destination
-    destination_spot, destination_name = choose_from_list(spots, "Escolha o local de DESTINO:")
+    destination_spot, destination_name = choose_from_list(places, "Escolha o local de DESTINO:")
     if destination_spot:
         destination = destination_spot
     else:
-        destination = resolve_place(destination_name, spots, API_KEY)
+        destination = resolve_place(destination_name, places, API_KEY)
         if destination:
-            spots = load_spots()  # Reload to get the new spot
+            places = load_places()  # Reload to get the new spot
     
-    return origin, destination, spots
+    return origin, destination, places
 
 
 def build_route_places(
     origin_id: int,
     destination_id: int,
     intermediate_ids: List[int],
-    all_spots: List[Dict]
-) -> Tuple[List[int], List[Dict]]:
+    all_places: List[Place]
+) -> Tuple[List[int], List[Place]]:
     """
     Build the ordered list of places for the route.
     
@@ -69,26 +70,26 @@ def build_route_places(
         # For circular routes, ensure we don't duplicate the origin in the middle
         visited_set = set(intermediate_ids)
         visited_set.discard(origin_id)  # Remove origin if selected as intermediate
-        visited_ids = [origin_id] + list(visited_set) + [destination_id]
+        places_to_visit_ids = [origin_id] + list(visited_set) + [destination_id]
     else:
         # For open routes, keep origin first and destination last
         intermediate_set = set(intermediate_ids)
         intermediate_set.discard(origin_id)  # Remove if accidentally included
         intermediate_set.discard(destination_id)  # Remove if accidentally included
-        visited_ids = [origin_id] + list(intermediate_set) + [destination_id]
+        places_to_visit_ids = [origin_id] + list(intermediate_set) + [destination_id]
     
     # Create places list maintaining order of visited
     places = []
-    for place_id in visited_ids:
-        place = next(spot for spot in all_spots if spot["id"] == place_id)
+    for place_id in places_to_visit_ids:
+        place = next(p for p in all_places if p.id == place_id)
         places.append(place)
     
-    return visited_ids, places
+    return places_to_visit_ids, places
 
 
 def prepare_optimization_data(
-    visited_ids: List[int],
-    places: List[Dict],
+    places_to_visit_ids: List[int],
+    places: List[Place],
     stay_times: Dict[int, int],
     origin_id: int,
     destination_id: int
@@ -98,8 +99,8 @@ def prepare_optimization_data(
     a = {}  # Opening times
     b = {}  # Closing times
     
-    for k, place_id in enumerate(visited_ids):
-        place = next(p for p in places if p['id'] == place_id)
+    for k, place_id in enumerate(places_to_visit_ids):
+        place = next(p for p in places if p.id == place_id)
         
         # Use user-defined stay time or default to 0 for origin/destination
         if place_id in stay_times:
@@ -109,8 +110,8 @@ def prepare_optimization_data(
         else:
             s[k] = 60  # default 60 minutes
         
-        a[k] = h2m(place['opening_time'])
-        b[k] = h2m(place['closing_time'])
+        a[k] = hhmm_to_minutes(place.opening_time)
+        b[k] = hhmm_to_minutes(place.closing_time)
     
     return s, a, b
 
@@ -134,10 +135,10 @@ def extract_optimal_route(x_vars: Dict, origin_idx: int, dest_idx: int) -> List[
 def main():
     """Main function for the touristic path optimization application."""
     # Load touristic spots
-    spots = load_spots()
+    places = load_places()
     
     # Get origin and destination
-    origin, destination, spots = get_origin_and_destination(spots)
+    origin, destination, places = get_origin_and_destination(places)
     
     # Validate origin and destination
     if not origin or not destination:
@@ -145,40 +146,29 @@ def main():
         return
     
     # Choose intermediate spots and get stay times
-    visit_ids, stay_times = choose_spots_to_visit(spots)
+    places_ids, stay_times = choose_spots_to_visit(places)
     
-    # Ask for starting time
-    print("\nQual horário deseja iniciar a rota? (formato HH:MM, ex: 08:30)")
-    while True:
-        try:
-            start_time = input(" → ").strip()
-            hours, minutes = map(int, start_time.split(":"))
-            if 0 <= hours < 24 and 0 <= minutes < 60:
-                start_minutes = hours * 60 + minutes
-                break
-            else:
-                print("Horário inválido. Use formato HH:MM (ex: 08:30)")
-        except:
-            print("Formato inválido. Use HH:MM (ex: 08:30)")
-    
+    # Get start time
+    start_minutes = ask_for_starting_time()
+
     # Build route places
-    visited_ids, places = build_route_places(
-        origin["id"],
-        destination["id"],
-        visit_ids,
-        spots
+    places_to_visit_ids, places = build_route_places(
+        origin.id,
+        destination.id,
+        places_ids,
+        places
     )
     
     # Get travel time matrix from Google Maps
-    travel_times = get_google_matrix(places, API_KEY)
+    travel_cost_times = get_google_matrix(places, API_KEY)
     
     # Prepare optimization data
     s, a, b = prepare_optimization_data(
-        visited_ids,
+        places_to_visit_ids,
         places,
         stay_times,
-        origin["id"],
-        destination["id"]
+        origin.id,
+        destination.id
     )
     
     # Create and solve optimization model
@@ -187,7 +177,7 @@ def main():
     dest_idx = nodes[-1]
     
     model, x_vars, u_vars, T_vars = create_optimization_model(
-        nodes, origin_idx, dest_idx, travel_times, s, a, b, start_time=start_minutes
+        nodes, origin_idx, dest_idx, travel_cost_times, s, a, b, start_time=start_minutes
     )
     
     # Disable Gurobi output

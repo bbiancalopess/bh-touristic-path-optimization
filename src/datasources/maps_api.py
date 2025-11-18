@@ -3,8 +3,10 @@
 from typing import Dict, List, Optional
 import requests
 
+from src.datasources.models import Place
 
-def get_google_matrix(places: List[Dict], api_key: str) -> List[List[int]]:
+
+def get_google_matrix(places: List[Place], api_key: str) -> List[List[int]]:
     """
     Get travel time matrix between all places using Google Distance Matrix API.
     
@@ -16,7 +18,7 @@ def get_google_matrix(places: List[Dict], api_key: str) -> List[List[int]]:
         2D matrix where matrix[i][j] is travel time from place i to j in minutes
     """
     # Build coordinates string
-    coordinates = [f"{place['lat']},{place['lng']}" for place in places]
+    coordinates = [f"{place.lat},{place.lng}" for place in places]
     coords_string = "|".join(coordinates)
 
     url = (

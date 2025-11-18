@@ -1,9 +1,14 @@
-
-def h2m(hhmm: str) -> int:
-    h, m = map(int, hhmm.split(":"))
-    return h * 60 + m
+from datetime import datetime
 
 
-def h2hhmm(m: int) -> str:
-    m = int(m)
-    return f"{m//60:02d}:{m%60:02d}"
+def hhmm_to_minutes(hhmm: str) -> int:
+    hhmm = hhmm.strip()
+    dt = datetime.strptime(hhmm, "%H:%M")
+    return dt.hour * 60 + dt.minute
+
+
+def minutes_to_hhmm(minutes: int) -> str:
+    minutes = int(minutes) % (24 * 60)
+    h = minutes // 60
+    m = minutes % 60
+    return f"{h:02d}:{m:02d}"

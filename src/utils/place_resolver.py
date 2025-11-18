@@ -1,16 +1,15 @@
-"""Place resolution utilities for finding and managing touristic locations."""
-
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import os
 import csv
 import math
 
+from src.datasources.models import Place
 from src.utils.fuzzy_search import search_on_csv
 from src.datasources.maps_api import search_place_on_google
 from src.ui.user_interface import confirm_location, display_info, display_success
 
 
-def resolve_place(typed_name: str, spots: List[Dict], api_key: str) -> Optional[Dict]:
+def resolve_place(typed_name: str, places: List[Place], api_key: str) -> Optional[Place]:
     """
     Resolve a place name to a location from the database or Google Maps.
     
@@ -21,19 +20,19 @@ def resolve_place(typed_name: str, spots: List[Dict], api_key: str) -> Optional[
     
     Args:
         typed_name: User-typed name of the location
-        spots: List of existing spots from database
+        places: List of existing spots from database
         api_key: Google Maps API key
     
     Returns:
-        Dictionary with location data or None if not found
+        Place or None if not found
     """
 
-    place, score = search_on_csv(typed_name, spots)
+    place, score = search_on_csv(typed_name, places)
 
     if place is not None:
         if confirm_location(
-            place['name'],
-            place.get('address', ''),
+            place.name,
+            place.address or "",
             'CSV',
             confidence=score
         ):
@@ -61,11 +60,11 @@ def resolve_place(typed_name: str, spots: List[Dict], api_key: str) -> Optional[
     duplicate = find_duplicate_by_coordinates(
         google_place['lat'],
         google_place['lng'],
-        spots
+        places
     )
     
     if duplicate:
-        display_info(f"Este local já existe no banco de dados como: {duplicate['name']}")
+        display_info(f"Este local já existe no banco de dados como: {duplicate.name}")
         use_existing = input("Deseja usar o local existente? (s/n): ").lower().strip()
         if use_existing == 's':
             return duplicate
@@ -73,16 +72,16 @@ def resolve_place(typed_name: str, spots: List[Dict], api_key: str) -> Optional[
             print("❌ Operação cancelada.")
             return None
     
-    new_place = save_new_place_to_csv(google_place, spots)
-    return new_place
+    new_place = save_new_place_to_csv(google_place)
+    return Place(**new_place)
 
 
 def find_duplicate_by_coordinates(
     lat: float,
     lng: float,
-    spots: List[Dict],
+    places: List[Place],
     threshold_meters: float = 50
-) -> Optional[Dict]:
+) -> Optional[Place]:
     """
     Check if a location already exists based on coordinates.
     threshold_meters: maximum distance in meters to consider as duplicate
@@ -105,16 +104,16 @@ def find_duplicate_by_coordinates(
         
         return distance
     
-    for spot in spots:
-        distance = haversine_distance(lat, lng, spot['lat'], spot['lng'])
-        if distance <= threshold_meters:
-            return spot
+    for place in places:
+        dist = haversine_distance(lat, lng, place.lat, place.lng)
+        if dist <= threshold_meters:
+            return place
     
     return None
 
+
 def save_new_place_to_csv(
     new_place: Dict,
-    existing_spots: List[Dict],
     csv_path: str = "src/datasources/touristic_spots.csv"
 ) -> Dict:
     """
